@@ -105,7 +105,7 @@ extern "C" {
 typedef struct redisReply {
     int type; /* REDIS_REPLY_* */
     long long integer; /* The integer when type is REDIS_REPLY_INTEGER */
-    int len; /* Length of string */
+    size_t len; /* Length of string */
     char *str; /* Used for both REDIS_REPLY_ERROR and REDIS_REPLY_STRING */
     size_t elements; /* number of elements, for REDIS_REPLY_ARRAY */
     struct redisReply **element; /* elements vector for REDIS_REPLY_ARRAY */
@@ -113,7 +113,7 @@ typedef struct redisReply {
 
 typedef struct redisReadTask {
     int type;
-    int elements; /* number of elements in multibulk container */
+    size_t elements; /* number of elements in multibulk container */
     int idx; /* index in parent (array) object */
     void *obj; /* holds user-generated value for a read task */
     struct redisReadTask *parent; /* parent task */
@@ -122,7 +122,7 @@ typedef struct redisReadTask {
 
 typedef struct redisReplyObjectFunctions {
     void *(*createString)(const redisReadTask*, char*, size_t);
-    void *(*createArray)(const redisReadTask*, int);
+    void *(*createArray)(const redisReadTask*, long long);
     void *(*createInteger)(const redisReadTask*, long long);
     void *(*createNil)(const redisReadTask*);
     void (*freeObject)(void*);
@@ -165,15 +165,15 @@ int redisReaderGetReply(redisReader *r, void **reply);
 void freeReplyObject(void *reply);
 
 /* Functions to format a command according to the protocol. */
-int redisvFormatCommand(char **target, const char *format, va_list ap);
-int redisFormatCommand(char **target, const char *format, ...);
-int redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen);
+size_t redisvFormatCommand(char **target, const char *format, va_list ap);
+size_t redisFormatCommand(char **target, const char *format, ...);
+size_t redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen);
 
 /* Context for a connection to Redis */
 typedef struct redisContext {
     int err; /* Error flags, 0 when there is no error */
     char errstr[128]; /* String representation of error when applicable */
-    int fd;
+    SOCKET fd;
     int flags;
     char *obuf; /* Write buffer */
     redisReader *reader; /* Protocol reader */

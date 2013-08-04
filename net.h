@@ -36,14 +36,16 @@
 #include "hiredis.h"
 #include <string.h>
 #ifndef HAVE_STRERROR_R
-#include <errno.h>
-#include <pthread.h>
+  #ifndef _WIN32
+    #include <errno.h>
+    #include <pthread.h>
 
-/* This lock protects the buffer returned by strerror().  We assume that
-   no other uses of strerror() exist in the program.  */
-extern pthread_mutex_t strerror_lock;
+    /* This lock protects the buffer returned by strerror().  We assume that
+       no other uses of strerror() exist in the program.  */
+    extern pthread_mutex_t strerror_lock;
 
-int strerror_r (int errnum, char *buf, size_t buflen);
+    int strerror_r (int errnum, char *buf, size_t buflen);
+  #endif
 #endif /* HAVE_STRERROR_R */
 
 
@@ -51,7 +53,7 @@ int strerror_r (int errnum, char *buf, size_t buflen);
 #define AF_LOCAL AF_UNIX
 #endif
 
-int redisCheckSocketError(redisContext *c, int fd);
+int redisCheckSocketError(redisContext *c, SOCKET fd);
 int redisContextSetTimeout(redisContext *c, const struct timeval tv);
 int redisContextConnectTcp(redisContext *c, const char *addr, int port, const struct timeval *timeout);
 #ifndef _WIN32

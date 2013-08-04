@@ -46,7 +46,7 @@
 
 static redisReply *createReplyObject(int type);
 static void *createStringObject(const redisReadTask *task, char *str, size_t len);
-static void *createArrayObject(const redisReadTask *task, int elements);
+static void *createArrayObject(const redisReadTask *task, long long elements);
 static void *createIntegerObject(const redisReadTask *task, long long value);
 static void *createNilObject(const redisReadTask *task);
 
@@ -62,7 +62,7 @@ static redisReplyObjectFunctions defaultFunctions = {
 
 /* Create a reply object */
 static redisReply *createReplyObject(int type) {
-    redisReply *r = calloc(1,sizeof(*r));
+    redisReply *r = (redisReply*) calloc(1,sizeof(*r));
 
     if (r == NULL)
         return NULL;
@@ -129,7 +129,7 @@ static void *createStringObject(const redisReadTask *task, char *str, size_t len
     return r;
 }
 
-static void *createArrayObject(const redisReadTask *task, int elements) {
+static void *createArrayObject(const redisReadTask *task, long long elements) {
     redisReply *r, *parent;
 
     r = createReplyObject(REDIS_REPLY_ARRAY);
@@ -262,7 +262,7 @@ static char *readBytes(redisReader *r, unsigned int bytes) {
 /* Find pointer to \r\n. */
 static char *seekNewline(char *s, size_t len) {
     int pos = 0;
-    int _len = len-1;
+    size_t _len = len-1;
 
     /* Position should be < len-1 because the character at "pos" should be
      * followed by a \n. Note that strchr cannot be used because it doesn't
@@ -315,9 +315,9 @@ static long long readLongLong(char *s) {
     return mult*v;
 }
 
-static char *readLine(redisReader *r, int *_len) {
+static char *readLine(redisReader *r, size_t *_len) {
     char *p, *s;
-    int len;
+    size_t len;
 
     p = r->buf+r->pos;
     s = seekNewline(p,(r->len-r->pos));
@@ -359,7 +359,7 @@ static int processLineItem(redisReader *r) {
     redisReadTask *cur = &(r->rstack[r->ridx]);
     void *obj;
     char *p;
-    int len;
+    size_t len;
 
     if ((p = readLine(r,&len)) != NULL) {
         if (cur->type == REDIS_REPLY_INTEGER) {
@@ -393,8 +393,8 @@ static int processBulkItem(redisReader *r) {
     redisReadTask *cur = &(r->rstack[r->ridx]);
     void *obj = NULL;
     char *p, *s;
-    long len;
-    unsigned long bytelen;
+    long long len;
+    size_t bytelen;
     int success = 0;
 
     p = r->buf+r->pos;
@@ -446,7 +446,7 @@ static int processMultiBulkItem(redisReader *r) {
     redisReadTask *cur = &(r->rstack[r->ridx]);
     void *obj;
     char *p;
-    long elements;
+    long long elements;
     int root = 0;
 
     /* Set error for nested multi bulks with depth > 7 */
@@ -668,7 +668,7 @@ int redisReaderGetReply(redisReader *r, void **reply) {
 }
 
 /* Calculate the number of bytes needed to represent an integer as string. */
-static int intlen(int i) {
+static size_t intlen(long long i) {
     int len = 0;
     if (i < 0) {
         len++;
@@ -686,15 +686,15 @@ static size_t bulklen(size_t len) {
     return 1+intlen(len)+2+len+2;
 }
 
-int redisvFormatCommand(char **target, const char *format, va_list ap) {
+size_t redisvFormatCommand(char **target, const char *format, va_list ap) {
     const char *c = format;
     char *cmd = NULL; /* final command */
-    int pos; /* position in final command */
+    size_t pos; /* position in final command */
     sds curarg, newarg; /* current argument */
     int touched = 0; /* was the current argument touched? */
     char **curargv = NULL, **newargv = NULL;
     int argc = 0;
-    int totlen = 0;
+    size_t totlen = 0;
     int j;
 
     /* Abort if there is not target to set */
@@ -930,9 +930,9 @@ err:
  * len = redisFormatCommand(target, "GET %s", mykey);
  * len = redisFormatCommand(target, "SET %s %b", mykey, myval, myvallen);
  */
-int redisFormatCommand(char **target, const char *format, ...) {
+size_t redisFormatCommand(char **target, const char *format, ...) {
     va_list ap;
-    int len;
+    size_t len;
     va_start(ap,format);
     len = redisvFormatCommand(target,format,ap);
     va_end(ap);
@@ -944,11 +944,11 @@ int redisFormatCommand(char **target, const char *format, ...) {
  * lengths. If the latter is set to NULL, strlen will be used to compute the
  * argument lengths.
  */
-int redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen) {
+size_t redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen) {
     char *cmd = NULL; /* final command */
-    int pos; /* position in final command */
+    size_t pos; /* position in final command */
     size_t len;
-    int totlen, j;
+    size_t totlen, j;
 
     /* Calculate number of bytes needed for the command */
     totlen = 1+intlen(argc)+2;
@@ -1274,7 +1274,7 @@ int __redisAppendCommand(redisContext *c, char *cmd, size_t len) {
 
 int redisvAppendCommand(redisContext *c, const char *format, va_list ap) {
     char *cmd;
-    int len;
+    size_t len;
 
     len = redisvFormatCommand(&cmd,format,ap);
     if (len == -1) {
@@ -1303,7 +1303,7 @@ int redisAppendCommand(redisContext *c, const char *format, ...) {
 
 int redisAppendCommandArgv(redisContext *c, int argc, const char **argv, const size_t *argvlen) {
     char *cmd;
-    int len;
+    size_t len;
 
     len = redisFormatCommandArgv(&cmd,argc,argv,argvlen);
     if (len == -1) {

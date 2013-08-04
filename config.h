@@ -8,6 +8,7 @@ Does absolutely nothing for Unix!
 
 #include "hiredis.h"
 #ifdef _WIN32
+#include <Mstcpip.h>
 
 #ifndef va_copy
 /* WARNING - DANGER - ASSUMES TYPICAL STACK MACHINE */

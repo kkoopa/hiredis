@@ -37,25 +37,25 @@
 typedef char *sds;
 
 struct sdshdr {
-    int len;
-    int free;
+    size_t len;
+    size_t free;
     char buf[];
 };
 
-static inline size_t sdslen(const sds s) {
-    struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
-    return sh->len;
+static inline int sdslen(const sds s) {
+    struct sdshdr *sh = (struct sdshdr *) (s-(sizeof(struct sdshdr)));
+    return (int) sh->len;
 }
 
 static inline size_t sdsavail(const sds s) {
-    struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
+    struct sdshdr *sh = (struct sdshdr*) (s-(sizeof(struct sdshdr)));
     return sh->free;
 }
 
-sds sdsnewlen(const void *init, size_t initlen);
+sds sdsnewlen(const void *init, int initlen);
 sds sdsnew(const char *init);
 sds sdsempty(void);
-size_t sdslen(const sds s);
+int sdslen(const sds s);
 sds sdsdup(const sds s);
 void sdsfree(sds s);
 size_t sdsavail(sds s);
@@ -74,7 +74,7 @@ sds sdscatprintf(sds s, const char *fmt, ...);
 #endif
 
 sds sdstrim(sds s, const char *cset);
-sds sdsrange(sds s, int start, int end);
+sds sdsrange(sds s, size_t start, size_t end);
 void sdsupdatelen(sds s);
 int sdscmp(sds s1, sds s2);
 sds *sdssplitlen(char *s, int len, char *sep, int seplen, int *count);

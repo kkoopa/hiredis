@@ -42,10 +42,10 @@ static void sdsOomAbort(void) {
 }
 #endif
 
-sds sdsnewlen(const void *init, size_t initlen) {
+sds sdsnewlen(const void *init, int initlen) {
     struct sdshdr *sh;
 
-    sh = malloc(sizeof(struct sdshdr)+initlen+1);
+    sh = (struct sdshdr *) malloc(sizeof(struct sdshdr)+initlen+1);
 #ifdef SDS_ABORT_ON_OOM
     if (sh == NULL) sdsOomAbort();
 #else
@@ -67,7 +67,7 @@ sds sdsempty(void) {
 
 sds sdsnew(const char *init) {
     size_t initlen = (init == NULL) ? 0 : strlen(init);
-    return sdsnewlen(init, initlen);
+    return sdsnewlen(init, (int) initlen);
 }
 
 sds sdsdup(const sds s) {
@@ -81,7 +81,7 @@ void sdsfree(sds s) {
 
 void sdsupdatelen(sds s) {
     struct sdshdr *sh = (void*) (s-(sizeof(struct sdshdr)));
-    int reallen = strlen(s);
+    size_t reallen = strlen(s);
     sh->free += (sh->len-reallen);
     sh->len = reallen;
 }
@@ -218,7 +218,7 @@ sds sdstrim(sds s, const char *cset) {
     return s;
 }
 
-sds sdsrange(sds s, int start, int end) {
+sds sdsrange(sds s, size_t start, size_t end) {
     struct sdshdr *sh = (void*) (s-(sizeof(struct sdshdr)));
     size_t newlen, len = sdslen(s);
 
@@ -262,7 +262,7 @@ void sdstoupper(sds s) {
 }
 
 int sdscmp(sds s1, sds s2) {
-    size_t l1, l2, minlen;
+    int l1, l2, minlen;
     int cmp;
 
     l1 = sdslen(s1);
@@ -375,7 +375,7 @@ sds sdsfromlonglong(long long value) {
     } while(v);
     if (value < 0) *p-- = '-';
     p++;
-    return sdsnewlen(p,32-(p-buf));
+    return sdsnewlen(p, (int) (32-(p-buf)));
 }
 
 sds sdscatrepr(sds s, char *p, size_t len) {
