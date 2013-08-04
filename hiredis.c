@@ -925,7 +925,7 @@ err:
  * %b represents a binary safe string
  *
  * When using %b you need to provide both the pointer to the string
- * and the length in bytes. Examples:
+ * and the length in bytes as a size_t. Examples:
  *
  * len = redisFormatCommand(target, "GET %s", mykey);
  * len = redisFormatCommand(target, "SET %s %b", mykey, myval, myvallen);
@@ -1044,21 +1044,36 @@ void redisFree(redisContext *c) {
  * context will be set to the return value of the error function.
  * When no set of reply functions is given, the default set will be used. */
 redisContext *redisConnect(const char *ip, int port) {
-    redisContext *c = redisContextInit();
+    redisContext *c;
+
+    c = redisContextInit();
+    if (c == NULL)
+        return NULL;
+
     c->flags |= REDIS_BLOCK;
     redisContextConnectTcp(c,ip,port,NULL);
     return c;
 }
 
-redisContext *redisConnectWithTimeout(const char *ip, int port, struct timeval tv) {
-    redisContext *c = redisContextInit();
+redisContext *redisConnectWithTimeout(const char *ip, int port, const struct timeval tv) {
+    redisContext *c;
+
+    c = redisContextInit();
+    if (c == NULL)
+        return NULL;
+
     c->flags |= REDIS_BLOCK;
     redisContextConnectTcp(c,ip,port,&tv);
     return c;
 }
 
 redisContext *redisConnectNonBlock(const char *ip, int port) {
-    redisContext *c = redisContextInit();
+    redisContext *c;
+
+    c = redisContextInit();
+    if (c == NULL)
+        return NULL;
+
     c->flags &= ~REDIS_BLOCK;
     redisContextConnectTcp(c,ip,port,NULL);
     return c;
@@ -1067,21 +1082,36 @@ redisContext *redisConnectNonBlock(const char *ip, int port) {
 #ifndef _WIN32
 /* no Unix Domaind stuff */
 redisContext *redisConnectUnix(const char *path) {
-    redisContext *c = redisContextInit();
+    redisContext *c;
+
+    c = redisContextInit();
+    if (c == NULL)
+        return NULL;
+
     c->flags |= REDIS_BLOCK;
     redisContextConnectUnix(c,path,NULL);
     return c;
 }
 
-redisContext *redisConnectUnixWithTimeout(const char *path, struct timeval tv) {
-    redisContext *c = redisContextInit();
+redisContext *redisConnectUnixWithTimeout(const char *path, const struct timeval tv) {
+    redisContext *c;
+
+    c = redisContextInit();
+    if (c == NULL)
+        return NULL;
+
     c->flags |= REDIS_BLOCK;
     redisContextConnectUnix(c,path,&tv);
     return c;
 }
 
 redisContext *redisConnectUnixNonBlock(const char *path) {
-    redisContext *c = redisContextInit();
+    redisContext *c;
+
+    c = redisContextInit();
+    if (c == NULL)
+        return NULL;
+
     c->flags &= ~REDIS_BLOCK;
     redisContextConnectUnix(c,path,NULL);
     return c;
@@ -1089,10 +1119,17 @@ redisContext *redisConnectUnixNonBlock(const char *path) {
 #endif
 
 /* Set read/write timeout on a blocking socket. */
-int redisSetTimeout(redisContext *c, struct timeval tv) {
+int redisSetTimeout(redisContext *c, const struct timeval tv) {
     if (c->flags & REDIS_BLOCK)
         return redisContextSetTimeout(c,tv);
     return REDIS_ERR;
+}
+
+/* Enable connection KeepAlive. */
+int redisEnableKeepAlive(redisContext *c) {
+    if (redisKeepAlive(c, REDIS_KEEPALIVE_INTERVAL) != REDIS_OK)
+        return REDIS_ERR;
+    return REDIS_OK;
 }
 
 /* Use this function to handle a read event on the descriptor. It will try
@@ -1114,7 +1151,7 @@ int redisBufferRead(redisContext *c) {
     nread = read(c->fd,buf,sizeof(buf));
 #endif
     if (nread == -1) {
-        if (errno == EAGAIN && !(c->flags & REDIS_BLOCK)) {
+        if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
             /* Try again later */
         } else {
             __redisSetError(c,REDIS_ERR_IO,NULL);
@@ -1156,7 +1193,7 @@ int redisBufferWrite(redisContext *c, int *done) {
         nwritten = write(c->fd,c->obuf,sdslen(c->obuf));
 #endif
         if (nwritten == -1) {
-            if (errno == EAGAIN && !(c->flags & REDIS_BLOCK)) {
+            if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
                 /* Try again later */
             } else {
                 __redisSetError(c,REDIS_ERR_IO,NULL);
