@@ -34,6 +34,18 @@
 #define __NET_H
 
 #include "hiredis.h"
+#include <string.h>
+#ifndef HAVE_STRERROR_R
+#include <errno.h>
+#include <pthread.h>
+
+/* This lock protects the buffer returned by strerror().  We assume that
+   no other uses of strerror() exist in the program.  */
+extern pthread_mutex_t strerror_lock;
+
+int strerror_r (int errnum, char *buf, size_t buflen);
+#endif /* HAVE_STRERROR_R */
+
 
 #if defined(__sun)
 #define AF_LOCAL AF_UNIX

@@ -33,19 +33,49 @@
 #include "config.h"
 #include "fmacros.h"
 #include <sys/types.h>
-#ifndef _WIN32
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <fcntl.h>
-#include <errno.h>
-#endif
 #include <string.h>
+#ifndef _WIN32
+  #include <sys/socket.h>
+  #include <sys/select.h>
+  #include <sys/un.h>
+  #include <netinet/in.h>
+  #include <netinet/tcp.h>
+  #include <arpa/inet.h>
+  #include <unistd.h>
+  #include <netdb.h>
+  #include <fcntl.h>
+  #include <errno.h>
+#endif
+#ifndef HAVE_STRERROR_R
+#include <errno.h>
+#include <pthread.h>
+
+/* This lock protects the buffer returned by strerror().  We assume that
+   no other uses of strerror() exist in the program.  */
+static pthread_mutex_t strerror_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int
+strerror_r (int errnum, char *buf, size_t buflen)
+{
+  char *errmsg = strerror (errnum);
+  size_t len = strlen (errmsg);
+  int ret;
+
+  pthread_mutex_lock (&strerror_lock);
+
+  if (len < buflen)
+    {
+      memcpy (buf, errmsg, len + 1);
+      ret = 0;
+    }
+  else
+    ret = ERANGE;
+
+ pthread_mutex_unlock (&strerror_lock);
+
+  return ret;
+}
+#endif /* HAVE_STRERROR_R */
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -195,22 +225,15 @@ static int redisSetTcpNoDelay(redisContext *c, int fd) {
 }
 
 static int redisContextWaitReady(redisContext *c, int fd, const struct timeval *timeout) {
-    struct timeval to;
     struct timeval *toptr = NULL;
     fd_set wfd;
 
     /* Only use timeout when not NULL. */
     if (timeout != NULL) {
-        if (timeout->tv_usec > 1000000 || timeout->tv_sec > __MAX_MSEC) {
+        if (timeout->tv_usec > 1000000) {
             __redisSetErrorFromErrno(c, REDIS_ERR_IO, NULL);
             close(fd);
             return REDIS_ERR;
-        }
-
-        msec = (timeout->tv_sec * 1000) + ((timeout->tv_usec + 999) / 1000);
-
-        if (msec < 0 || msec > INT_MAX) {
-            msec = INT_MAX;
         }
     }
 
