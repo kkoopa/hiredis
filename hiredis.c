@@ -46,7 +46,7 @@
 
 static redisReply *createReplyObject(int type);
 static void *createStringObject(const redisReadTask *task, char *str, size_t len);
-static void *createArrayObject(const redisReadTask *task, long long elements);
+static void *createArrayObject(const redisReadTask *task, int elements);
 static void *createIntegerObject(const redisReadTask *task, long long value);
 static void *createNilObject(const redisReadTask *task);
 
@@ -129,7 +129,7 @@ static void *createStringObject(const redisReadTask *task, char *str, size_t len
     return r;
 }
 
-static void *createArrayObject(const redisReadTask *task, long long elements) {
+static void *createArrayObject(const redisReadTask *task, int elements) {
     redisReply *r, *parent;
 
     r = createReplyObject(REDIS_REPLY_ARRAY);

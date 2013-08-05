@@ -122,7 +122,7 @@ typedef struct redisReadTask {
 
 typedef struct redisReplyObjectFunctions {
     void *(*createString)(const redisReadTask*, char*, size_t);
-    void *(*createArray)(const redisReadTask*, long long);
+    void *(*createArray)(const redisReadTask*, int);
     void *(*createInteger)(const redisReadTask*, long long);
     void *(*createNil)(const redisReadTask*);
     void (*freeObject)(void*);
