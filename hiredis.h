@@ -37,6 +37,7 @@
 
 #ifndef _WIN32
 #include <sys/time.h> /* for struct timeval */
+#define SOCKET int
 #else
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -114,7 +115,7 @@ typedef struct redisReply {
 typedef struct redisReadTask {
     int type;
     size_t elements; /* number of elements in multibulk container */
-    int idx; /* index in parent (array) object */
+    unsigned int idx; /* index in parent (array) object */
     void *obj; /* holds user-generated value for a read task */
     struct redisReadTask *parent; /* parent task */
     void *privdata; /* user-settable arbitrary field */
@@ -165,9 +166,9 @@ int redisReaderGetReply(redisReader *r, void **reply);
 void freeReplyObject(void *reply);
 
 /* Functions to format a command according to the protocol. */
-size_t redisvFormatCommand(char **target, const char *format, va_list ap);
-size_t redisFormatCommand(char **target, const char *format, ...);
-size_t redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen);
+int redisvFormatCommand(char **target, const char *format, va_list ap);
+int redisFormatCommand(char **target, const char *format, ...);
+int redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen);
 
 /* Context for a connection to Redis */
 typedef struct redisContext {

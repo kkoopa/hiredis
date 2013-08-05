@@ -261,7 +261,7 @@ static char *readBytes(redisReader *r, unsigned int bytes) {
 
 /* Find pointer to \r\n. */
 static char *seekNewline(char *s, size_t len) {
-    int pos = 0;
+    unsigned int pos = 0;
     size_t _len = len-1;
 
     /* Position should be < len-1 because the character at "pos" should be
@@ -686,7 +686,7 @@ static size_t bulklen(size_t len) {
     return 1+intlen(len)+2+len+2;
 }
 
-size_t redisvFormatCommand(char **target, const char *format, va_list ap) {
+int redisvFormatCommand(char **target, const char *format, va_list ap) {
     const char *c = format;
     char *cmd = NULL; /* final command */
     size_t pos; /* position in final command */
@@ -885,9 +885,9 @@ size_t redisvFormatCommand(char **target, const char *format, va_list ap) {
     for (j = 0; j < argc; j++) {
 #ifdef _WIN32
         /* %zu not understood by VS2008 */
-        pos += sprintf(cmd+pos,"$%lu\r\n",sdslen(curargv[j]));
+        pos += sprintf(cmd+pos,"$%ld\r\n",sdslen(curargv[j]));
 #else
-        pos += sprintf(cmd+pos,"$%zu\r\n",sdslen(curargv[j]));
+        pos += sprintf(cmd+pos,"$%d\r\n",sdslen(curargv[j]));
 #endif
         memcpy(cmd+pos,curargv[j],sdslen(curargv[j]));
         pos += sdslen(curargv[j]);
@@ -930,9 +930,9 @@ err:
  * len = redisFormatCommand(target, "GET %s", mykey);
  * len = redisFormatCommand(target, "SET %s %b", mykey, myval, myvallen);
  */
-size_t redisFormatCommand(char **target, const char *format, ...) {
+int redisFormatCommand(char **target, const char *format, ...) {
     va_list ap;
-    size_t len;
+    int len;
     va_start(ap,format);
     len = redisvFormatCommand(target,format,ap);
     va_end(ap);
@@ -944,11 +944,12 @@ size_t redisFormatCommand(char **target, const char *format, ...) {
  * lengths. If the latter is set to NULL, strlen will be used to compute the
  * argument lengths.
  */
-size_t redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen) {
+int redisFormatCommandArgv(char **target, int argc, const char **argv, const size_t *argvlen) {
     char *cmd = NULL; /* final command */
     size_t pos; /* position in final command */
     size_t len;
-    size_t totlen, j;
+    size_t totlen;
+    int j;
 
     /* Calculate number of bytes needed for the command */
     totlen = 1+intlen(argc)+2;
@@ -1274,7 +1275,7 @@ int __redisAppendCommand(redisContext *c, char *cmd, size_t len) {
 
 int redisvAppendCommand(redisContext *c, const char *format, va_list ap) {
     char *cmd;
-    size_t len;
+    int len;
 
     len = redisvFormatCommand(&cmd,format,ap);
     if (len == -1) {
@@ -1303,7 +1304,7 @@ int redisAppendCommand(redisContext *c, const char *format, ...) {
 
 int redisAppendCommandArgv(redisContext *c, int argc, const char **argv, const size_t *argvlen) {
     char *cmd;
-    size_t len;
+    int len;
 
     len = redisFormatCommandArgv(&cmd,argc,argv,argvlen);
     if (len == -1) {

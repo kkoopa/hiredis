@@ -218,9 +218,9 @@ sds sdstrim(sds s, const char *cset) {
     return s;
 }
 
-sds sdsrange(sds s, size_t start, size_t end) {
+sds sdsrange(sds s, int start, int end) {
     struct sdshdr *sh = (void*) (s-(sizeof(struct sdshdr)));
-    size_t newlen, len = sdslen(s);
+    int newlen, len = sdslen(s);
 
     if (len == 0) return s;
     if (start < 0) {

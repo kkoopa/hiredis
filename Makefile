@@ -108,6 +108,9 @@ check: hiredis-test
 			( kill `cat /tmp/hiredis-test-redis.pid` && false )
 	kill `cat /tmp/hiredis-test-redis.pid`
 
+test.o: test.c
+	$(CC) -D_POSIX_C_SOURCE=199309L -std=c99 -pedantic -c $(REAL_CFLAGS) test.c
+
 .c.o:
 	$(CC) -D_POSIX_SOURCE -std=c99 -pedantic -c $(REAL_CFLAGS) $<
 
